@@ -6,10 +6,6 @@ from train.cnn_model.train import create_cnn
 from train.tsn_model.train import TemporalShiftLayer
 from train.siamse_model.train import euclidean_distance
 
-# WAV_1 = r"C:\Users\levsh\Desktop\tracks\track0010\original.txt"
-# WAV_2 = r"C:\Users\levsh\Desktop\tracks\track0010\reverse.wav"
-
-
 class Model:
     def __init__(self):
         print("Загрузка моделей...")    
