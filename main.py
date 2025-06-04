@@ -5,6 +5,9 @@ import librosa
 import librosa.display
 import random
 import datetime
+from compare_two_audio_files import Model
+
+
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QVBoxLayout,
@@ -23,6 +26,7 @@ class WaveformCanvas(FigureCanvas):
         self.ax = fig.add_subplot(111)
         self.title = title
         super().__init__(fig)
+        
 
     def plot_waveform(self, y, sr):
         self.ax.clear()
@@ -51,11 +55,12 @@ class SpectrogramCanvas(FigureCanvas):
 class AudioCompareApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Аудио сравнение (демо)")
+        self.setWindowTitle("Сравнение аудиозаписей")
         self.setGeometry(100, 100, 1200, 900)
 
         self.audio_files = []
         self.audio_dir = ""
+        self.model:Model = Model()
 
         self.init_ui()
         self.update_clock()
@@ -93,7 +98,6 @@ class AudioCompareApp(QMainWindow):
         file_select_layout.addWidget(self.compare_btn)
         layout.addLayout(file_select_layout)
 
-        # Визуализация
         wave_1 = QHBoxLayout()
         wave_2 = QHBoxLayout()
 
@@ -119,17 +123,26 @@ class AudioCompareApp(QMainWindow):
         self.result_layout.addWidget(self.result_label)
         self.save_report_btn = QPushButton("Сохранить отчет")
         self.save_report_btn.clicked.connect(self.save_report)
-        self.result_layout.addWidget(self.save_report_btn)
+        
         self.result_frame.setLayout(self.result_layout)
         layout.addWidget(self.result_frame)
 
         mass_layout = QHBoxLayout()
+        mass1_layout = QHBoxLayout()
+        mass2_layout = QHBoxLayout()
+        
         self.mass_compare_btn = QPushButton("Поиск дубликатов в папке")
         self.mass_compare_btn.clicked.connect(self.mass_compare)
         self.result_list = QListWidget()
-        mass_layout.addWidget(self.mass_compare_btn)
+
+        mass1_layout.addWidget(self.mass_compare_btn)
+        mass2_layout.addWidget(self.save_report_btn)
+        
         mass_layout.addWidget(self.result_list)
+        
+        layout.addLayout(mass1_layout)        
         layout.addLayout(mass_layout)
+        layout.addLayout(mass2_layout)
 
         widget.setLayout(layout)
         self.setCentralWidget(widget)
@@ -158,25 +171,31 @@ class AudioCompareApp(QMainWindow):
         file2 = self.combo2.currentText()
         if not file1 or not file2:
             return
-
-        y1, sr1 = self.load_audio(file1)
-        y2, sr2 = self.load_audio(file2)
-
+        try:   
+            y1, sr1 = self.load_audio(file1)
+        except Exception as ex:
+            QMessageBox.warning(self, "Внимание", "Файл 1 имеет неверный формат или отсутствует.")
+            return
+        
+        try:
+            y2, sr2 = self.load_audio(file2)
+        except Exception as ex:
+            QMessageBox.warning(self, "Внимание", "Файл 2 имеет неверный формат или отсутствует.")
+            return
+         
         self.waveform1.plot_waveform(y1, sr1)
         self.waveform2.plot_waveform(y2, sr2)
         self.spectrogram1.plot_spectrogram(y1, sr1)
         self.spectrogram2.plot_spectrogram(y2, sr2)
 
-        similarity = round(random.uniform(0.5, 0.99), 2)
-        if similarity > 0.9:
-            quality = "Почти дубликат"
-            color = "#a6f3a6"
-        elif similarity > 0.75:
-            quality = "Возможно дубликат"
-            color = "#fff2a6"
+        similarity = self.model.inference(os.path.join(self.audio_dir, file1),
+                                          os.path.join(self.audio_dir, file2))
+        if similarity > 0.75:
+            quality = "Высокая вероятность нечеткого дубликата или дубликата"
+            color = "#05bf11"
         else:
             quality = "Не дубликат"
-            color = "#f3a6a6"
+            color = "#840707"
 
         self.result_frame.setStyleSheet(f"background-color: {color}; border: 1px solid #ccc;")
         self.result_label.setText(
@@ -187,8 +206,14 @@ class AudioCompareApp(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(self, "Сохранить отчет", "отчет.txt")
         if path:
             with open(path, 'w', encoding='utf-8') as f:
-                f.write(self.result_label.text())
+                if self.result_label.text() != "":
+                    f.write(self.result_label.text() + '\n')
+                if self.result_list.count() > 0:
+                    for i in range(self.result_list.count()):
+                        item = self.result_list.item(i)
+                        f.write(item.text() + '\n')
             QMessageBox.information(self, "Отчет сохранен", f"Отчет сохранен в: {path}")
+
 
     def mass_compare(self):
         if not self.audio_files:
@@ -201,8 +226,10 @@ class AudioCompareApp(QMainWindow):
             for j in range(i + 1, len(self.audio_files)):
                 f1 = self.audio_files[i]
                 f2 = self.audio_files[j]
-                score = round(random.uniform(0.4, 0.99), 2)
-                if score > 0.85:
+                score = self.model.inference(self.audio_dir +'/'+ f1,self.audio_dir +'/'+ f2)
+                if score is None:
+                    continue
+                if score > 0.7:
                     self.result_list.addItem(f"{f1} <=> {f2} — {score * 100:.1f}%")
                 pairs_checked.add((f1, f2))
 
