@@ -1,18 +1,17 @@
 
 import os
 import numpy as np
-np.complex = complex  # fix для librosa
+np.complex = complex  
 import librosa
 import soundfile as sf
 import random
 from pydub import AudioSegment
 
-# Параметры
 INPUT_DIR = r"D:\music"
 OUTPUT_DIR = r"D:\music\train"
-DURATION = 30  # длина записи в секундах
+DURATION = 30  
 SAMPLE_RATE = 16000
-NOISE_LEVELS = [0.005, 0.1, 0.02]  # Уровни шума
+NOISE_LEVELS = [0.005, 0.1, 0.02]  
 
 
 def add_noise(y, noise_level):
@@ -42,7 +41,6 @@ def apply_echo(audioseg, delay_ms=250, attenuation_db=6):
 def apply_reverse(audioseg):
     return audioseg.reverse()
 
-# Обработка
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 track_id = 1
 
@@ -60,7 +58,6 @@ for fname in os.listdir(INPUT_DIR):
     orig = y[:sr * DURATION]
     cut = random_cut(y, sr, 10)
 
-    # Папка трека
     track_folder = os.path.join(OUTPUT_DIR, f"track{track_id:04d}")
     os.makedirs(track_folder, exist_ok=True)
 
@@ -71,7 +68,6 @@ for fname in os.listdir(INPUT_DIR):
         noise = add_noise(orig, level)
         sf.write(os.path.join(track_folder, f"noise_{i+1}.wav"), noise, sr)
 
-    # Эхо и реверс через pydub
     audio_seg = AudioSegment.from_wav(wav_path)[:DURATION * 1000]
     echo = apply_echo(audio_seg)
     reverse = apply_reverse(audio_seg)
