@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
 
-class TemporalShiftLayer(tf.keras.layers.Layer):
+class TemporalSegmentLayer(tf.keras.layers.Layer):
     def __init__(self, shift_ratio=0.25,**kwargs):
         super().__init__(**kwargs)  
         self.shift_ratio = shift_ratio
@@ -17,7 +17,7 @@ class TemporalShiftLayer(tf.keras.layers.Layer):
 
 def create_tsn(input_shape=(10, 512), output_dim=256):
     inputs = layers.Input(shape=input_shape)
-    x = TemporalShiftLayer()(inputs)                      
+    x = TemporalSegmentLayer()(inputs)                      
     x = layers.Bidirectional(layers.LSTM(128))(x)         
     x = layers.Dense(output_dim, activation='relu')(x)    
     model = models.Model(inputs, x)

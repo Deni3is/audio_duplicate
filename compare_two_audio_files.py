@@ -3,7 +3,7 @@ from tensorflow.keras.models import load_model
 
 from train.preproc.spectr import audio_to_overlapping_chunks, chunk_to_melspec_sequence
 from train.cnn_model.train import create_cnn
-from train.tsn_model.train import TemporalShiftLayer
+from train.tsn_model.train import TemporalSegmentLayer
 from train.siamse_model.train import euclidean_distance
 
 class Model:
@@ -12,7 +12,7 @@ class Model:
         self.cnn_model = create_cnn()
         self.tsn_model = load_model(
             r"C:\Users\levsh\Desktop\git\audio_duplicate\modelv2\tsn_model.h5",
-            custom_objects={"TemporalShiftLayer": TemporalShiftLayer}
+            custom_objects={"TemporalSegmentLayer": TemporalSegmentLayer}
         )
         self.siamese_model = load_model(
             r"C:\Users\levsh\Desktop\git\audio_duplicate\modelv2\siamese_model.h5",
