@@ -3,7 +3,6 @@ import os
 import numpy as np
 import librosa
 import librosa.display
-import random
 import datetime
 from compare_two_audio_files import Model
 
