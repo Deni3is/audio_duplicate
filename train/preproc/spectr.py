@@ -11,7 +11,6 @@ SEGMENT_DURATION = 10.0
 OVERLAP = 3.0            
 SUBSEGMENT_DURATION = 1.0  
 
-# === 1. Нарезка аудио на перекрывающиеся 10-секундные фрагменты ===
 def audio_to_overlapping_chunks(filepath, sr=SAMPLE_RATE, segment_duration=SEGMENT_DURATION, overlap=OVERLAP):
     y, sr = librosa.load(filepath, sr=sr)
     segment_len = int(segment_duration * sr)
@@ -24,7 +23,6 @@ def audio_to_overlapping_chunks(filepath, sr=SAMPLE_RATE, segment_duration=SEGME
 
     return chunks
 
-# === 2. Преобразование 10-секундного фрагмента в 10-секундные мел-спектрограммы ===
 def chunk_to_melspec_sequence(chunk, sr=SAMPLE_RATE, segment_duration=SUBSEGMENT_DURATION, mel_size=MEL_SIZE):
     segment_len = int(segment_duration * sr)
     mels = []
@@ -44,7 +42,6 @@ def chunk_to_melspec_sequence(chunk, sr=SAMPLE_RATE, segment_duration=SUBSEGMENT
 
     return np.array(mels)  
 
-# === 3. Генерация последовательностей эмбеддингов через CNN ===
 def process_audio_to_embedding_sequences(filepath, cnn_model, output_dir="cnn_embeddings", custom_name=None):
     os.makedirs(output_dir, exist_ok=True)
     filename = custom_name if custom_name else os.path.splitext(os.path.basename(filepath))[0]

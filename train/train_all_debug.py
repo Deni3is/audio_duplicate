@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 
 
-# === ПАРАМЕТРЫ ===
 DATASET_DIR = "D:\music"
 EMB_DIR = "D:\music\embedings"
 SPLITS = ["train", "val"]
@@ -20,7 +19,6 @@ SPLITS = ["train", "val"]
 def log(message):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
 
-# === 1. Извлечение эмбеддингов из всех аудиофайлов ===
 def extract_all_embeddings(cnn_model):
     for split in SPLITS:
         log(f"Обработка раздела: {split}")
@@ -52,24 +50,19 @@ def load_embeddings_and_process_tsn(embedding_dir, tsn_model):
         if not fname.endswith(".npy"):
             continue
         path = os.path.join(embedding_dir, fname)
-        emb = np.load(path)  # shape: (T, 512)
+        emb = np.load(path)  
         if len(emb.shape) != 2 or emb.shape[0] < 1:
             print(f"{fname} → shape: {emb.shape}")
             continue
 
-        # Добавляем измерение батча → (1, T, 512)
         emb_input = np.expand_dims(emb, axis=0)
-        tsn_output = tsn_model.predict(emb_input, verbose=0)  # → shape (1, 256)
+        tsn_output = tsn_model.predict(emb_input, verbose=0) 
         X.append(tsn_output[0])
 
-        # Метка: track ID из имени файла
         label = fname.split("_")[0]
         labels.append(label)
 
     return np.array(X), np.array(labels)
-
-
-
 
 def load_embeddings_with_labels(embedding_dir):
     X = []
@@ -89,7 +82,6 @@ def load_embeddings_with_labels(embedding_dir):
     
     return np.array(X), np.array(labels), filenames
 
-# === 2. Загрузка эмбеддингов для TSN ===
 def load_embeddings_for_tsn(split_path):
     X, y = [], []
     log(f"Загрузка эмбеддингов из {split_path}")
@@ -109,14 +101,12 @@ def generate_balanced_siamese_pairs(embeddings, labels):
     for i, label in enumerate(labels):
         label_to_indices.setdefault(label, []).append(i)
 
-    # Положительные пары
     positive_pairs = []
     for indices in label_to_indices.values():
         for i in range(len(indices)):
             for j in range(i + 1, len(indices)):
                 positive_pairs.append((indices[i], indices[j]))
 
-    # Отрицательные пары
     negative_pairs = []
     all_labels = list(label_to_indices.keys())
     while len(negative_pairs) < len(positive_pairs):
@@ -125,7 +115,6 @@ def generate_balanced_siamese_pairs(embeddings, labels):
         j = random.choice(label_to_indices[l2])
         negative_pairs.append((i, j))
 
-    # Собираем X и y
     for i, j in positive_pairs:
         X_a.append(embeddings[i])
         X_b.append(embeddings[j])
@@ -153,7 +142,6 @@ def generate_siamese_pairs_from_embeddings(embeddings, labels=None, num_negative
     count = 0
 
     if labels is None:
-        # Предполагаем, что каждые 6 подряд — из одного класса
         group_size = 6
         for i in range(N):
             for j in range(i + 1, N):
@@ -165,13 +153,11 @@ def generate_siamese_pairs_from_embeddings(embeddings, labels=None, num_negative
                 if count >= max_pairs:
                     return np.array(X_a), np.array(X_b), np.array(y)
     else:
-        # С использованием явных меток классов
         label_to_indices = {}
         for i, label in enumerate(labels):
             label_to_indices.setdefault(label, []).append(i)
 
         for label, pos_indices in label_to_indices.items():
-            # Положительные пары
             for i in range(len(pos_indices)):
                 for j in range(i + 1, len(pos_indices)):
                     X_a.append(embeddings[pos_indices[i]])
@@ -181,7 +167,7 @@ def generate_siamese_pairs_from_embeddings(embeddings, labels=None, num_negative
                     if count >= max_pairs:
                         return np.array(X_a), np.array(X_b), np.array(y)
 
-            # Отрицательные пары
+            
             neg_labels = [l for l in label_to_indices if l != label]
             for i in pos_indices:
                 for _ in range(num_negatives):
@@ -197,7 +183,6 @@ def generate_siamese_pairs_from_embeddings(embeddings, labels=None, num_negative
     return np.array(X_a), np.array(X_b), np.array(y)
 
 
-# === 3. Генерация пар для сиамской сети ===
 def generate_siamese_pairs(embedding_dir):
     pairs_a, pairs_b, labels = [], [], []
     log(f"Генерация пар из {embedding_dir}")
@@ -221,14 +206,12 @@ def generate_siamese_pairs(embedding_dir):
     log(f"Создано {len(labels)} пар")
     return np.array(pairs_a), np.array(pairs_b), np.array(labels)
 
-# === 4. Обучение всей цепочки ===
 def train_pipeline(cnn_model):
     t0 = time.time()
     log("1. Извлечение эмбеддингов...")
-    # extract_all_embeddings(cnn_model)  # включи, если нужно извлекать заново
+    extract_all_embeddings(cnn_model)  # включи, если нужно извлекать заново
     log(f"✓ Эмбеддинги извлечены за {int(time.time() - t0)} сек")
 
-    # === TSN ===
     log("2. Обработка эмбеддингов через TSN...")
     t1 = time.time()
     tsn_model = create_tsn()
@@ -239,7 +222,7 @@ def train_pipeline(cnn_model):
     print(f"TSN → train: {X_train_emb.shape}, val: {X_val_emb.shape}")
     tsn_model.save("models/tsn_model.h5")
     log("📦 TSN модель сохранена в models/tsn_model.h5")
-    # === Сиамская сеть ===
+
     log("3. Обучение сиамской сети...")
     t2 = time.time()
 
@@ -260,10 +243,9 @@ def train_pipeline(cnn_model):
         batch_size=64*2
     )
     log(f"✓ Сиамская сеть обучена за {int(time.time() - t2)} сек")
-    # === Сохранение модели ===
+    
     siamese_model.save("models/siamese_model.h5")
     log("📦 Сиамская модель сохранена в models/siamese_model.h5")
-    # === Графики ===
     plt.figure()
     plt.plot(history.history['loss'], label='Train Loss')
     plt.plot(history.history['val_loss'], label='Val Loss')
@@ -278,7 +260,6 @@ def train_pipeline(cnn_model):
     plt.title("Accuracy")
     plt.savefig("accuracy_plot.png")
 
-    # === Оценка ===
     y_pred_prob = siamese_model.predict([X_a_val, X_b_val])
     y_pred = (y_pred_prob > 0.7).astype(int)
 
@@ -294,7 +275,6 @@ def train_pipeline(cnn_model):
     log(f"✅ Все этапы завершены за {int(time.time() - t0)} сек")
 
 
-# === Пример запуска ===
 if __name__ == "__main__":
     from cnn_model.train import create_cnn
     cnn = create_cnn()
