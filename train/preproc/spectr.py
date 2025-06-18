@@ -50,20 +50,20 @@ def process_audio_to_embedding_sequences(filepath, cnn_model, output_dir="cnn_em
     all_embeddings = []
 
     for chunk in chunks:
-        mel_batch = chunk_to_melspec_sequence(chunk)  # → (N, F, T)
+        mel_batch = chunk_to_melspec_sequence(chunk)  
         if mel_batch.shape[0] == 0:
             continue
 
-        embeddings = cnn_model.predict(mel_batch, verbose=0)  # → (N, 512)
-        all_embeddings.extend(embeddings)  # ✅ добавляем поштучно, а не список
+        embeddings = cnn_model.predict(mel_batch, verbose=0)  
+        all_embeddings.extend(embeddings)  
 
     if not all_embeddings:
-        print(f"⚠ Пропущено: {filename}, пустой список")
+        print(f"Пропущено: {filename}, пустой список")
         return
 
-    out_array = np.array(all_embeddings)  # → shape (T, 512)
+    out_array = np.array(all_embeddings)  
     output_path = os.path.join(output_dir, f"{filename}_embeddings.npy")
     np.save(output_path, out_array)
-    print(f"✓ Сохранено: {output_path}, shape = {out_array.shape}")
+    print(f"Сохранено: {output_path}, shape = {out_array.shape}")
     return output_path
 
